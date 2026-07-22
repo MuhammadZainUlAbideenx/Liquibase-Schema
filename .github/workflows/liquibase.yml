@@ -10,77 +10,88 @@ on:
 
 jobs:
   liquibase-test:
-
     runs-on: ubuntu-latest
 
     services:
-
       postgres:
         image: postgres:17
         ports:
           - 5432:5432
-
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: liquibase_demo
-
         options: >-
           --health-cmd="pg_isready -U postgres -d liquibase_demo"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=10
 
     env:
-
       LIQUIBASE_URL: jdbc:postgresql://localhost:5432/liquibase_demo
       LIQUIBASE_USERNAME: postgres
       LIQUIBASE_PASSWORD: postgres
 
     steps:
-
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: '21'
 
-      - name: Install Liquibase
+      - name: Setup Liquibase
+        uses: liquibase/setup-liquibase@v1
+        with:
+          version: '5.0.3'
+
+      - name: Verify Liquibase Installation
+        run: liquibase --version
+
+      - name: Download PostgreSQL JDBC Driver
         run: |
-          curl -L https://github.com/liquibase/liquibase/releases/download/v5.0.3/liquibase-5.0.3.tar.gz \
-            -o liquibase.tar.gz
-
-          tar -xzf liquibase.tar.gz
-
-          sudo mv liquibase /usr/local/bin/
-
-          liquibase --version
-
-      - name: Download PostgreSQL Driver
-        run: |
-          mkdir liquibase_libs
+          mkdir -p liquibase_libs
 
           curl -L \
-            https://jdbc.postgresql.org/download/postgresql-42.7.7.jar \
+            https://jdbc.postgresql.org/download/postgresql-42.7.11.jar \
             -o liquibase_libs/postgresql.jar
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres
+          do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
 
       - name: Validate Changelog
         run: |
           liquibase \
-          --classpath=liquibase_libs/postgresql.jar \
-          validate
+            --classpath=liquibase_libs/postgresql.jar \
+            validate
+
+      - name: Show Pending Changes
+        run: |
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            status
 
       - name: Apply Database Changes
         run: |
           liquibase \
-          --classpath=liquibase_libs/postgresql.jar \
-          update
+            --classpath=liquibase_libs/postgresql.jar \
+            update
 
-      - name: Check Status
+      - name: Verify Database Is Up-to-date
         run: |
           liquibase \
-          --classpath=liquibase_libs/postgresql.jar \
-          status
+            --classpath=liquibase_libs/postgresql.jar \
+            status --verbose
+
+      - name: Validate Again
+        run: |
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            validate
