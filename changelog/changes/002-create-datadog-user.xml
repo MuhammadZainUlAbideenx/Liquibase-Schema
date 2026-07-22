@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="002-create-datadog-user" author="zain">
+
+        <sql>
+            CREATE ROLE datadog
+            WITH LOGIN
+            PASSWORD '${datadog.password}';
+        </sql>
+
+        <sql>
+            GRANT CONNECT ON DATABASE liquibase_demo TO datadog;
+        </sql>
+
+        <sql>
+            GRANT USAGE ON SCHEMA public TO datadog;
+        </sql>
+
+        <sql>
+            GRANT SELECT ON ALL TABLES IN SCHEMA public TO datadog;
+        </sql>
+
+        <sql>
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public
+            GRANT SELECT ON TABLES TO datadog;
+        </sql>
+
+        <sql>
+            GRANT pg_monitor TO datadog;
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>
