@@ -27,11 +27,6 @@ jobs:
           --health-timeout=5s
           --health-retries=10
 
-    env:
-      LIQUIBASE_URL: jdbc:postgresql://localhost:5432/liquibase_demo
-      LIQUIBASE_USERNAME: postgres
-      LIQUIBASE_PASSWORD: postgres
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -54,24 +49,18 @@ jobs:
 
           tar -xzf liquibase.tar.gz -C liquibase-home
 
-          echo "=== Extracted Files ==="
-          ls -R liquibase-home
-
           chmod +x liquibase-home/liquibase
 
           sudo mv liquibase-home /opt/liquibase
 
           sudo ln -sf /opt/liquibase/liquibase /usr/local/bin/liquibase
 
-          liquibase --version
+      - name: Verify Liquibase Installation
+        run: liquibase --version
 
-      - name: Download PostgreSQL JDBC Driver
+      - name: Verify PostgreSQL JDBC Driver
         run: |
-          mkdir -p liquibase_libs
-
-          curl -L \
-            https://jdbc.postgresql.org/download/postgresql-42.7.11.jar \
-            -o liquibase_libs/postgresql.jar
+          ls -lh liquibase_libs/postgresql.jar
 
       - name: Wait for PostgreSQL
         run: |
@@ -83,30 +72,24 @@ jobs:
 
       - name: Validate Changelog
         run: |
-          liquibase \
-            --classpath=liquibase_libs/postgresql.jar \
-            validate
+          liquibase validate
 
       - name: Show Pending Changes
         run: |
-          liquibase \
-            --classpath=liquibase_libs/postgresql.jar \
-            status
+          liquibase status
 
       - name: Apply Database Changes
+        env:
+          DATADOG_PASSWORD: ${{ secrets.DATADOG_PASSWORD }}
         run: |
           liquibase \
-            --classpath=liquibase_libs/postgresql.jar \
+            -Ddatadog.password="$DATADOG_PASSWORD" \
             update
 
       - name: Verify Database Is Up-to-date
         run: |
-          liquibase \
-            --classpath=liquibase_libs/postgresql.jar \
-            status --verbose
+          liquibase status --verbose
 
       - name: Validate Again
         run: |
-          liquibase \
-            --classpath=liquibase_libs/postgresql.jar \
-            validate
+          liquibase validate
