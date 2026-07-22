@@ -1,0 +1,10 @@
+# Liquibase drivers
+liquibase_libs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: liquibase_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: liquibase_demo
+    ports:
+      - "5432:5432"
