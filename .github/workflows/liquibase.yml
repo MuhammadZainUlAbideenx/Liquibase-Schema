@@ -1,0 +1,88 @@
+name: Liquibase CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+  pull_request:
+
+jobs:
+  liquibase-test:
+
+    runs-on: ubuntu-latest
+
+    services:
+
+      postgres:
+        image: postgres:17
+        ports:
+          - 5432:5432
+
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: liquibase_demo
+
+        options: >-
+          --health-cmd="pg_isready -U postgres -d liquibase_demo"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+
+      LIQUIBASE_URL: jdbc:postgresql://localhost:5432/liquibase_demo
+      LIQUIBASE_USERNAME: postgres
+      LIQUIBASE_PASSWORD: postgres
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install Liquibase
+        run: |
+          curl -L https://github.com/liquibase/liquibase/releases/download/v5.0.3/liquibase-5.0.3.tar.gz \
+            -o liquibase.tar.gz
+
+          tar -xzf liquibase.tar.gz
+
+          sudo mv liquibase /usr/local/bin/
+
+          liquibase --version
+
+      - name: Download PostgreSQL Driver
+        run: |
+          mkdir liquibase_libs
+
+          curl -L \
+            https://jdbc.postgresql.org/download/postgresql-42.7.7.jar \
+            -o liquibase_libs/postgresql.jar
+
+      - name: Validate Changelog
+        run: |
+          liquibase \
+          --classpath=liquibase_libs/postgresql.jar \
+          validate
+
+      - name: Apply Database Changes
+        run: |
+          liquibase \
+          --classpath=liquibase_libs/postgresql.jar \
+          update
+
+      - name: Check Status
+        run: |
+          liquibase \
+          --classpath=liquibase_libs/postgresql.jar \
+          status
