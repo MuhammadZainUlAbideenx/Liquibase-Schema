@@ -109,6 +109,20 @@ jobs:
             --property="datadog.password=$DATADOG_PASSWORD" \
             update
 
+      - name: Set Datadog Password
+        env:
+          PGPASSWORD: postgres
+          DATADOG_PASSWORD: ${{ secrets.DATADOG_PASSWORD }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+          psql \
+            -h localhost \
+            -U postgres \
+            -d liquibase_demo \
+            -c "ALTER ROLE datadog PASSWORD '${DATADOG_PASSWORD}';"
+      
       - name: Verify Database Is Up-to-date
         run: |
           liquibase \

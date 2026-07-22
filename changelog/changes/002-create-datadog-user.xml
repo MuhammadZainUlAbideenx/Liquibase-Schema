@@ -13,7 +13,6 @@
             Create a read-only PostgreSQL user for Datadog monitoring.
         </comment>
 
-        <!-- Create the role only if it doesn't already exist -->
         <sql splitStatements="false">
             DO $$
             BEGIN
@@ -22,36 +21,29 @@
                     FROM pg_roles
                     WHERE rolname = 'datadog'
                 ) THEN
-                    CREATE ROLE datadog
-                    LOGIN
-                    PASSWORD '${datadog.password}';
+                    CREATE ROLE datadog LOGIN;
                 END IF;
             END
             $$;
         </sql>
 
-        <!-- Allow connection to the database -->
         <sql>
             GRANT CONNECT ON DATABASE liquibase_demo TO datadog;
         </sql>
 
-        <!-- Allow access to the public schema -->
         <sql>
             GRANT USAGE ON SCHEMA public TO datadog;
         </sql>
 
-        <!-- Read access to all existing tables -->
         <sql>
             GRANT SELECT ON ALL TABLES IN SCHEMA public TO datadog;
         </sql>
 
-        <!-- Automatically grant SELECT on future tables -->
         <sql>
             ALTER DEFAULT PRIVILEGES IN SCHEMA public
             GRANT SELECT ON TABLES TO datadog;
         </sql>
 
-        <!-- Grant PostgreSQL monitoring role -->
         <sql>
             GRANT pg_monitor TO datadog;
         </sql>
