@@ -44,13 +44,23 @@ jobs:
 
       - name: Install Liquibase
         run: |
+          set -e
+
           curl -L \
             https://github.com/liquibase/liquibase/releases/download/v5.0.3/liquibase-5.0.3.tar.gz \
             -o liquibase.tar.gz
 
-          tar -xzf liquibase.tar.gz
+          mkdir liquibase-home
 
-          sudo mv liquibase /opt/liquibase
+          tar -xzf liquibase.tar.gz -C liquibase-home
+
+          echo "=== Extracted Files ==="
+          ls -R liquibase-home
+
+          chmod +x liquibase-home/liquibase
+
+          sudo mv liquibase-home /opt/liquibase
+
           sudo ln -sf /opt/liquibase/liquibase /usr/local/bin/liquibase
 
           liquibase --version
