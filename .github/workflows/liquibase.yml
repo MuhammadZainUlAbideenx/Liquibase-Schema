@@ -42,13 +42,18 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Setup Liquibase
-        uses: liquibase/setup-liquibase@v1
-        with:
-          version: '5.0.3'
+      - name: Install Liquibase
+        run: |
+          curl -L \
+            https://github.com/liquibase/liquibase/releases/download/v5.0.3/liquibase-5.0.3.tar.gz \
+            -o liquibase.tar.gz
 
-      - name: Verify Liquibase Installation
-        run: liquibase --version
+          tar -xzf liquibase.tar.gz
+
+          sudo mv liquibase /opt/liquibase
+          sudo ln -sf /opt/liquibase/liquibase /usr/local/bin/liquibase
+
+          liquibase --version
 
       - name: Download PostgreSQL JDBC Driver
         run: |
