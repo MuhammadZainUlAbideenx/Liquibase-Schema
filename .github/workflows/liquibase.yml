@@ -106,7 +106,7 @@ jobs:
             --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
             --username="postgres" \
             --password="postgres" \
-            -Ddatadog.password="$DATADOG_PASSWORD" \
+            --property="datadog.password=$DATADOG_PASSWORD" \
             update
 
       - name: Verify Database Is Up-to-date
