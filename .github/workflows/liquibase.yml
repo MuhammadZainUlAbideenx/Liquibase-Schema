@@ -3,10 +3,10 @@ name: Liquibase CI
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 jobs:
   liquibase-test:
@@ -35,7 +35,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
 
       - name: Install Liquibase
         run: |
@@ -58,8 +58,14 @@ jobs:
       - name: Verify Liquibase Installation
         run: liquibase --version
 
-      - name: Verify PostgreSQL JDBC Driver
+      - name: Download PostgreSQL JDBC Driver
         run: |
+          mkdir -p liquibase_libs
+
+          curl -L \
+            https://jdbc.postgresql.org/download/postgresql-42.7.11.jar \
+            -o liquibase_libs/postgresql.jar
+
           ls -lh liquibase_libs/postgresql.jar
 
       - name: Wait for PostgreSQL
@@ -72,24 +78,53 @@ jobs:
 
       - name: Validate Changelog
         run: |
-          liquibase validate
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            validate
 
       - name: Show Pending Changes
         run: |
-          liquibase status
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            status
 
       - name: Apply Database Changes
         env:
           DATADOG_PASSWORD: ${{ secrets.DATADOG_PASSWORD }}
         run: |
           liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
             -Ddatadog.password="$DATADOG_PASSWORD" \
             update
 
       - name: Verify Database Is Up-to-date
         run: |
-          liquibase status --verbose
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            status --verbose
 
       - name: Validate Again
         run: |
-          liquibase validate
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            validate
