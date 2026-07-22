@@ -15,4 +15,8 @@
         file="changes/002-create-datadog-user.xml"
         relativeToChangelogFile="true"/>
 
+    <include
+        file="changes/003-create-admin-user.xml"
+        relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

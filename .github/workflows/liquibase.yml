@@ -116,6 +116,7 @@ jobs:
       - name: Apply Database Changes
         env:
           DATADOG_PASSWORD: ${{ secrets.DATADOG_PASSWORD }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           liquibase \
             --classpath=liquibase_libs/postgresql.jar \
@@ -140,6 +141,8 @@ jobs:
             -c "ALTER ROLE datadog PASSWORD '${DATADOG_PASSWORD}';"
       
       - name: Verify Database Is Up-to-date
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           liquibase \
             --classpath=liquibase_libs/postgresql.jar \
@@ -150,6 +153,8 @@ jobs:
             status --verbose
 
       - name: Validate Again
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           liquibase \
             --classpath=liquibase_libs/postgresql.jar \
