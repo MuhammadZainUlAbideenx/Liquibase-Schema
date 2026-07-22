@@ -76,6 +76,23 @@ jobs:
             sleep 2
           done
 
+      - name: Generate Liquibase Properties
+        env:
+          DATADOG_PASSWORD: ${{ secrets.DATADOG_PASSWORD }}
+        run: |
+          cat > liquibase.properties <<EOF
+          url=jdbc:postgresql://localhost:5432/liquibase_demo
+          username=postgres
+          password=postgres
+          driver=org.postgresql.Driver
+
+          changeLogFile=changelog/db.changelog.xml
+
+          datadog.password=${DATADOG_PASSWORD}
+
+          logLevel=INFO
+          EOF
+      
       - name: Validate Changelog
         run: |
           liquibase \
@@ -106,7 +123,6 @@ jobs:
             --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
             --username="postgres" \
             --password="postgres" \
-            --property="datadog.password=$DATADOG_PASSWORD" \
             update
 
       - name: Set Datadog Password
