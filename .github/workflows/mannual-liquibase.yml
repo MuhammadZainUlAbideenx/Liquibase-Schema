@@ -1,0 +1,12 @@
+name: Mannual Liquibase CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  liquibase-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Liquibase CI Skeleton
+        run: echo "Liquibase CI skeleton workflow"
