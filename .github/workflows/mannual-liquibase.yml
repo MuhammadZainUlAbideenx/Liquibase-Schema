@@ -1,4 +1,4 @@
-name: Liquibase CI
+name: Mannual Liquibase CI
 
 on:
   workflow_dispatch:
