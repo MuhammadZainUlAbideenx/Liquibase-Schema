@@ -1,0 +1,160 @@
+name: Liquibase CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  liquibase-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: liquibase_demo
+        options: >-
+          --health-cmd="pg_isready -U postgres -d liquibase_demo"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Liquibase
+        run: |
+          set -e
+
+          curl -L \
+            https://github.com/liquibase/liquibase/releases/download/v5.0.3/liquibase-5.0.3.tar.gz \
+            -o liquibase.tar.gz
+
+          mkdir liquibase-home
+
+          tar -xzf liquibase.tar.gz -C liquibase-home
+
+          chmod +x liquibase-home/liquibase
+
+          sudo mv liquibase-home /opt/liquibase
+
+          sudo ln -sf /opt/liquibase/liquibase /usr/local/bin/liquibase
+
+      - name: Verify Liquibase Installation
+        run: liquibase --version
+
+      - name: Download PostgreSQL JDBC Driver
+        run: |
+          mkdir -p liquibase_libs
+
+          curl -L \
+            https://jdbc.postgresql.org/download/postgresql-42.7.11.jar \
+            -o liquibase_libs/postgresql.jar
+
+          ls -lh liquibase_libs/postgresql.jar
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres
+          do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+
+      - name: Generate Liquibase Properties
+        env:
+          DATADOG_PASSWORD: ${{ secrets.DATADOG_PASSWORD }}
+        run: |
+          cat > liquibase.properties <<EOF
+          url=jdbc:postgresql://localhost:5432/liquibase_demo
+          username=postgres
+          password=postgres
+          driver=org.postgresql.Driver
+
+          changeLogFile=changelog/db.changelog.xml
+
+          datadog.password=${DATADOG_PASSWORD}
+
+          logLevel=INFO
+          EOF
+
+      - name: Validate Changelog
+        run: |
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            validate
+
+      - name: Show Pending Changes
+        run: |
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            status
+
+      - name: Apply Database Changes
+        env:
+          DATADOG_PASSWORD: ${{ secrets.DATADOG_PASSWORD }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            update
+
+      - name: Set Datadog Password
+        env:
+          PGPASSWORD: postgres
+          DATADOG_PASSWORD: ${{ secrets.DATADOG_PASSWORD }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+          psql \
+            -h localhost \
+            -U postgres \
+            -d liquibase_demo \
+            -c "ALTER ROLE datadog PASSWORD '${DATADOG_PASSWORD}';"
+
+      - name: Verify Database Is Up-to-date
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            status --verbose
+
+      - name: Validate Again
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          liquibase \
+            --classpath=liquibase_libs/postgresql.jar \
+            --driver=org.postgresql.Driver \
+            --url="jdbc:postgresql://localhost:5432/liquibase_demo" \
+            --username="postgres" \
+            --password="postgres" \
+            validate
